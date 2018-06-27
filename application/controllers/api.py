@@ -1,9 +1,12 @@
 # -*- coding: utf8 -*-
+import json
+
 from application import app
-from flask import request, jsonify
+from flask import request, jsonify, redirect, url_for
 from application import user
 from application import common
 from application.auth import jwtauth
+from application.auth.meta_auth import jwt_required
 
 auth = jwtauth.Auth()
 
@@ -44,10 +47,24 @@ def login():
 
 
 @app.route('/user', methods=['GET'])
-def get():
+@jwt_required
+def get(message):
     """
     获取用户信息
     :return:
     """
-    result = auth.identify(request)
-    return jsonify(result)
+    # result = auth.identify(request)
+    # print(message)
+    # result = {
+    #     'test': 't'
+    # }
+    result = jsonify(message)
+    if message['code'] == 301:
+        return redirect(url_for("index", message=result))
+    return result
+
+@app.route('/', methods=['get'])
+def index():
+    return jsonify({
+        'msg': 'Hello World'
+    })
