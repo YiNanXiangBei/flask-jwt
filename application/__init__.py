@@ -5,3 +5,4 @@ app.config.from_object("application.configs")
 db = SQLAlchemy(app)
 
 from application.models import user
+from application.controllers import api

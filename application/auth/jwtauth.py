@@ -1,7 +1,10 @@
 # -*- coding: utf8 -*-
 import datetime
+import json
+
 import jwt
 import time
+import base64
 from flask import jsonify
 
 from application import common
@@ -50,9 +53,9 @@ class Auth(object):
             else:
                 raise jwt.InvalidTokenError
         except jwt.ExpiredSignatureError:
-            return 'Token 过期'
+            return 'Token 过期请重新登录'
         except jwt.InvalidTokenError:
-            return '无效 Token'
+            return '无效 Token，请重新登录'
 
     def authenticate(self, username, password):
         """
@@ -61,13 +64,14 @@ class Auth(object):
         :param password:
         :return:
         """
-        userInfo = user.Users.query.filter_by(username=username).first()
-        if userInfo is None:
+        user_info = user.Users.query.filter_by(username=username).first()
+        if user_info is None:
             return jsonify(common.false_return('', '找不到用户'))
         else:
-            if user.Users.check_password(user.Users, userInfo.password, password):
+            if user.Users.check_password(user_info.password, password):
                 login_time = int(time.time())
-                token = self.encode_auth_token(userInfo.id, login_time)
+                user.Users.update(user.Users, user_info.id, login_time)
+                token = self.encode_auth_token(user_info.id, login_time)
                 return jsonify(common.true_return(token.decode(), '登录成功'))
             else:
                 return jsonify(common.false_return('', '密码不正确'))
@@ -78,25 +82,32 @@ class Auth(object):
         :param request:
         :return:
         """
-        auth_header = request.headers.get('Authorization')
-        if auth_header:
-            auth_tokenArr = auth_header.split(" ")
-            if not auth_tokenArr or auth_tokenArr[0] != 'JWT' or len(auth_tokenArr) != 2:
-                result = common.false_return('', '请传递正确的验证头信息')
-            else:
-                auth_token = auth_tokenArr[1]
-                payload = self.decode_auth_token(auth_token)
-                if not isinstance(payload, str):
-                    users = user.Users.get(user.Users, payload['data']['id'])
-                    if users is None:
-                        result = common.false_return('', '找不到该用户')
-                    else:
-                        if users.login_time == payload['data']['login_time']:
-                            result = common.true_return(user.id, '请求成功')
-                        else:
-                            result = common.false_return('', 'Token已更改，请重新登录获取')
+        auth_token = request.headers.get('Authorization')
+        if auth_token:
+            auth_token_arr = auth_token.split(".")
+            if not auth_token_arr or len(auth_token_arr) == 3:
+                auth_header = json.loads(base64.b64decode(str(auth_token_arr[0]).encode()).decode())
+                if auth_header['typ'] != 'JWT':
+                    result = common.false_return('', '请传递正确的验证头信息')
                 else:
-                    result = common.false_return('', payload)
+                    payload = self.decode_auth_token(auth_token)
+                    if not isinstance(payload, str):
+                        users = user.Users.get_by_id(user.Users, payload['data']['id'])
+                        if users is None:
+                            result = common.false_return('', '找不到该用户')
+                        else:
+                            if users.login_time == payload['data']['login_time']:
+                                return_user = {
+                                    'id': users.id,
+                                    'username': users.username
+                                }
+                                result = common.true_return(return_user, '请求成功')
+                            else:
+                                result = common.false_return('', 'Token已更改，请重新登录获取')
+                    else:
+                        result = common.false_return('', payload)
+            else:
+                result = common.false_return('', '请传递正确的验证头信息')
         else:
             result = common.false_return('', '没有提供认证Token')
         return result

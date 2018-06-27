@@ -9,7 +9,8 @@ class Users(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(10), unique=True)
-    password = db.Column(db.String(32))
+    password = db.Column(db.String(100))
+    login_time = db.Column(db.Integer)
 
     def __init__(self, username, password):
         self.username = username
@@ -21,14 +22,21 @@ class Users(db.Model):
     def get_by_id(self, id):
         return self.query.filter_by(id=id).first()
 
-    def add(self, user):
+    @staticmethod
+    def add(user):
         db.session.add(user)
         return session_commit()
 
-    def check_password(self, hash, password):
+    def update(self, id, login_time):
+        self.query.filter_by(id=id).update({Users.login_time: login_time})
+        return session_commit()
+
+    @staticmethod
+    def check_password(hash, password):
         return check_password_hash(hash, password)
 
-    def set_password(self, password):
+    @staticmethod
+    def set_password(password):
         return generate_password_hash(password)
 
 

@@ -1,5 +1,6 @@
 # -*- coding: utf8 -*-
 
+
 def true_return(data, msg):
     return {
         "status": True,
