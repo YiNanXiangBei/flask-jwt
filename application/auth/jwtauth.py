@@ -9,7 +9,7 @@ from flask import jsonify
 
 from application import common
 from application import configs
-from application import user
+from application.models.user import Users
 
 
 class Auth(object):
@@ -64,13 +64,13 @@ class Auth(object):
         :param password:
         :return:
         """
-        user_info = user.Users.query.filter_by(username=username).first()
+        user_info = Users.query.filter_by(username=username).first()
         if user_info is None:
             return jsonify(common.false_return('', '找不到用户'))
         else:
-            if user.Users.check_password(user_info.password, password):
+            if Users.check_password(user_info.password, password):
                 login_time = int(time.time())
-                user.Users.update(user.Users, user_info.id, login_time)
+                Users.update(Users, user_info.id, login_time)
                 token = self.encode_auth_token(user_info.id, login_time)
                 return jsonify(common.true_return(token.decode(), '登录成功'))
             else:
@@ -92,7 +92,7 @@ class Auth(object):
                 else:
                     payload = self.decode_auth_token(auth_token)
                     if not isinstance(payload, str):
-                        users = user.Users.get_by_id(user.Users, payload['data']['id'])
+                        users = Users.get_by_id(payload['data']['id'])
                         if users is None:
                             result = common.false_return('', '找不到该用户')
                         else:

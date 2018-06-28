@@ -1,5 +1,7 @@
 # -*- coding: utf8 -*-
+from sqlalchemy import engine
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import sessionmaker
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from application import db
@@ -19,8 +21,11 @@ class Users(db.Model):
     def __repr__(self):
         return '<User %r>' % self.username
 
-    def get_by_id(self, id):
-        return self.query.filter_by(id=id).first()
+    @staticmethod
+    def get_by_id(id):
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        return session.query(Users).filter_by(id=id).first()
 
     @staticmethod
     def add(user):

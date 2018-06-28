@@ -22,7 +22,7 @@ def jwt_required(func):
                 else:
                     payload = Auth.decode_auth_token(auth_token)
                     if not isinstance(payload, str):
-                        users = user.Users.get_by_id(user.Users, payload['data']['id'])
+                        users = user.Users.get_by_id(payload['data']['id'])
                         if users is None:
                             result = common.false_return('', '找不到该用户')
                         else:
